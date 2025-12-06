@@ -1,7 +1,7 @@
-./Deep-SVDD-PyTorch
+Deep-SVDD-PyTorch/
+Anomaly-Detection-PatchSVDD-PyTorch/
 
 datasets/*
+models/svdd.py
 
-./models/svdd.py
-
-./EDA_*
+**/EDA_*
