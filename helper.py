@@ -75,15 +75,14 @@ class ConvFeatureMap(torch.nn.Module):
     """A convolutional feature extractor using ResNet50."""
     def __init__(self, device: Optional[torch.device]=None) -> Self:
         from    torchvision.models      import  resnet50, ResNet50_Weights
-        
         super().__init__()
         if device is None:  device = torch.get_default_device()
         
         _resnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
         self.extractor = torch.nn.Sequential(*list(_resnet.children())[:-2])
         self.to(device)
-        
         del(_resnet)
+        
         return
     
     
