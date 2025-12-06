@@ -61,7 +61,7 @@ class DeepSVDD(torch.nn.Module):
 
         self.__nu:      float   = nu
         self.__C:       float   = C
-        self.__center           = ... # NOTE: The center of the hypersphere should not be trained
+        self.__center:  Optional[torch.Tensor]  = None
         self.__is_soft: bool    = is_soft_boundary
         
         self.r_soft         = torch.nn.Parameter(torch.randn((1,), device=device, requires_grad=True))
@@ -70,6 +70,37 @@ class DeepSVDD(torch.nn.Module):
         if device is None: device = torch.get_default_device()
         self.__device = device
         self.to(device)
+        return
+    
+    
+    def initialize_center(self, x: Optional[torch.Tensor]=None, dataloader: Optional[torch.utils.data.DataLoader]=None, eps: float=1e-2) -> None:
+        """Initializes the center of the hypersphere.
+        
+        Arguments:
+            `x` (`Optional[torch.Tensor]`, default=`None`):
+                The input tensor of shape `(N, ...)` to compute the initial center. If `None`, the `dataloader` argument must be provided.
+            `dataloader` (`Optional[torch.utils.data.DataLoader]`, default=`None`):
+                The dataloader to compute the initial center. If `None`, the `x` argument must be provided.
+            `eps` (`float`, default=`1e-2`):
+                A small value to avoid having zero-valued components in the center.
+        """
+        if x is None and dataloader is None:
+            raise ValueError("Either 'x' or 'dataloader' must be provided to initialize the center.")
+        flag = self.training
+        self.eval()
+        with torch.inference_mode():
+            if x is not None:
+                c = self.encoder.forward(x.to(self.__device)).flatten(start_dim=1)
+            else:
+                x = []
+                for data, _ in dataloader:
+                    x.append(self.encoder.forward(data.to(self.__device)).flatten(start_dim=1))
+                c = torch.cat(x, dim=0)
+        c = c.mean(dim=0)
+        c[(torch.abs(c) < eps) & (c < 0)] = -eps
+        c[(torch.abs(c) < eps) & (c > 0)] = eps
+        self.__center = c
+        self.train(flag)
         return
     
     
@@ -147,8 +178,19 @@ class DeepSVDD(torch.nn.Module):
     
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the Deep SVDD model."""
-        _cfg = {'size': [x.size(0)], 'device': x.device}
+        """Computes the anomaly scores for the input samples. This is equivalent to calling `anomaly_score(x)`.
+        
+        Arguments:
+            `x` (`torch.Tensor`): The input tensor of shape `(batch_size, ...)`.
+        Returns:
+            `torch.Tensor`: The computed anomaly scores of shape `(batch_size, 1)`.
+        """
+        return self.anomaly_score(x)
+    
+    
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
+        """Predict whether the input samples are anomalies. `x[i]` is `0` if it is normal, `1` otherwise."""
+        _cfg = {'size': [1], 'device': x.device}
         zeros   = torch.zeros(**_cfg)
         ones    = torch.ones( **_cfg)
         score   = self.anomaly_score(x)
