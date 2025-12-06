@@ -1,11 +1,14 @@
-from    typing  import  Self
+from    typing  import  Self, Optional
 import  torch
-from    torch.nn    import  functional   as  F
+
+
+__all__: list[str] = ['Autoencoder_MNIST']
 
 
 class Autoencoder_MNIST(torch.nn.Module):
-    def __init__(self) -> Self:
+    def __init__(self, device: Optional[torch.device]=None) -> Self:
         super().__init__()
+        if device is None:  device = torch.get_default_device()
         self.__rep_dim = 32
 
         self.encoder = torch.nn.Sequential(
@@ -39,7 +42,7 @@ class Autoencoder_MNIST(torch.nn.Module):
             
             torch.nn.Sigmoid(),
         )
-        
+        self.to(device)
         return
 
 

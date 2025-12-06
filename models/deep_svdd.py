@@ -50,7 +50,7 @@ class DeepSVDD(torch.nn.Module):
         else:
             self.encoder = _construct_base_encoder()
         for md_enc in self.encoder.modules():
-            for p in md_enc.named_parameters():
+            for p, _ in md_enc.named_parameters():
                 if p.endswith("bias"):
                     raise AttributeError("Deep SVDD encoder should not contain bias terms.")
         

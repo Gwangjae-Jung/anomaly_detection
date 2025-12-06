@@ -14,20 +14,21 @@ class Dataset_MNIST(Dataset):
             normal_classes: Sequence[int] = tuple(range(10)),
         ) -> Self:
         import  numpy   as  np
-        self.__data   = torch.from_numpy(np.load(Path(path))).type(torch.float)
-        self.__label  = torch.from_numpy(np.load(Path(path))).type(torch.long)
+        _loaded = np.load(Path(path))
+        self.__data     = torch.from_numpy(_loaded['data']).type(torch.float)
+        self.__targets  = torch.from_numpy(_loaded['targets']).type(torch.long)
         arg = []
         for i in normal_classes:
-            arg += torch.argwhere(self.__label == i).flatten().tolist()
-        self.__data   = self.__data[arg]
-        self.__label  = self.__label[arg]
+            arg += torch.argwhere(self.__targets == i).flatten().tolist()
+        self.__data     = self.__data[arg].unsqueeze(1) / 255.0 # Shape: (N, 1, 28, 28)
+        self.__targets  = self.__targets[arg]
         return
     
     
     def __len__(self) -> int:
-        return len(self.__label)
+        return len(self.__targets)
     
     
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
-        return self.__data[index], self.__label[index].item()
+        return self.__data[index], self.__targets[index].item()
     

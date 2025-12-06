@@ -1,3 +1,7 @@
 ./Deep-SVDD-PyTorch
 
 datasets/*
+
+./models/svdd.py
+
+./EDA_*
