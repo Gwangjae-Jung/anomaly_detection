@@ -20,16 +20,17 @@ class DeepSVDD(torch.nn.Module):
     """An implementation of the Deep Support Vector Data Description (Deep SVDD) model."""
     def __init__(
             self,
-            encoder:    Optional[torch.nn.Module],
-            nu:         float = 0.05,
-            C:          float = 1.0,
-            device:     Optional[torch.device] = None,
+            encoder:            torch.nn.Module,
+            nu:                 float = 0.05,
+            C:                  float = 1.0,
+            is_soft_boundary:   bool = True,
+            device:             Optional[torch.device] = None,
         ) -> Self:
         """The initializer for `DeepSVDD`.
         
         Arguments:
-            `encoder` (`Optional[torch.nn.Module]`):
-                The encoder network to be used in the Deep SVDD model. See **Remark** for the constraints of the encoder.
+            `encoder` (`torch.nn.Module`):
+                The encoder network to be fine-tuned in the Deep SVDD model. See **Remark** for the constraints of the encoder.
             `nu` (`float`, default=`0.05`):
                 The hyperparameter nu in the Deep SVDD model, which is an upper bound on the fraction of outliers and a lower bound on the fraction of samples being outside or on the boundary of the hypersphere.
             `C` (`float`, default=`1.0`):
@@ -58,10 +59,13 @@ class DeepSVDD(torch.nn.Module):
         if (not isinstance(C, float)) or C<0.0:
             raise ValueError("The penalty term should be a nonnegative real number.")
 
-        self.__nu       = float(nu)
-        self.__C        = float(C)
-        self.__center   = ... # NOTE: The center of the hypersphere should not be trained
-        self.radius     = torch.nn.Parameter(torch.randn((1,)))
+        self.__nu:      float   = nu
+        self.__C:       float   = C
+        self.__center           = ... # NOTE: The center of the hypersphere should not be trained
+        self.__is_soft: bool    = is_soft_boundary
+        
+        self.r_soft         = torch.nn.Parameter(torch.randn((1,), device=device, requires_grad=True))
+        self.__r_one_class    = torch.tensor([0.0], device=device)
         
         if device is None: device = torch.get_default_device()
         self.__device = device
@@ -73,33 +77,37 @@ class DeepSVDD(torch.nn.Module):
         """Computes the anomaly scores for the input samples. The score of an input sample `p` is defined as the norm of `encoder(p)-center`.
         
         Arguments:
-            `x` (`torch.Tensor`): The input tensor.
+            `x` (`torch.Tensor`): The input tensor of shape `(batch_size, ...)`.
         Returns:
-            `torch.Tensor`: The computed anomaly scores.
+            `torch.Tensor`: The computed anomaly scores of shape `(batch_size, 1)`.
         """
-        dev: torch.Tensor = self.encoder.forward(x) - self.__center
-        return dev.flatten(start_dim=1).norm(p=2, keepdim=True)
+        z: torch.Tensor = self.encoder.forward(x).flatten(start_dim=1)
+        base_score = (z-self.__center).norm(p=2, dim=1, keepdim=True)
+        if self.__is_soft:
+            return base_score - self.r_soft.pow(2)
+        else:
+            return base_score
     
     
     def _compute_penalty(self, unit: bool=False) -> torch.Tensor:
-        """Computes the penalty term, which is defined as the sum of the Frobenius norms of the weights of all layers in the encoder, multiplied by `C/2`.
+        """Computes the penalty term of shape `(1,)`, which is defined as the sum of the Frobenius norms of the weights of all layers in the encoder, multiplied by `C/2`.
         """
         penalty = torch.zeros((1,), device=self.__device)
         for p in self.encoder.parameters():
             penalty = penalty + torch.norm(p, p='fro').pow(2)
-        penalty = penalty / 2
+        penalty = penalty/2
         if unit:    return penalty
-        else:       return self.__C * penalty
+        else:       return self.__C*penalty
     
     
     def compute_loss__soft_boundary(self, x: torch.Tensor) -> torch.Tensor:
         """Computes the soft-boundary Deep SVDD loss.
         
         Arguments:
-            `x` (`torch.Tensor`): The input tensor.
+            `x` (`torch.Tensor`): The input tensor of shape `(batch_size, ...)`.
         
         Returns:
-            `torch.Tensor`: The computed loss.
+            `torch.Tensor`: The computed loss of shape `(1,)`.
         """
         anomaly_score = self.anomaly_score(x).pow(2).mean()/self.__nu
         penalty = self._compute_penalty()
@@ -107,16 +115,17 @@ class DeepSVDD(torch.nn.Module):
             raise RuntimeError(f"The average anomaly score should be a single scalar value, but is of shape {list(anomaly_score.shape)}.")
         if _DEBUG and penalty.numel()>1:
             raise RuntimeError(f"The penalty term should be a single scalar value, but is of shape {list(penalty.shape)}.")
-        return torch.clamp_min(anomaly_score, self.radius.pow(2)) + penalty
+        return torch.clamp_min(anomaly_score, self.r_soft.pow(2)) + penalty
     
     
     def compute_loss__one_class(self, x: torch.Tensor) -> torch.Tensor:
         """Computes the one-class Deep SVDD loss.
         
         Arguments:
-            `x` (`torch.Tensor`): The input tensor.
+            `x` (`torch.Tensor`): The input tensor of shape `(batch_size, ...)`.
+        
         Returns:
-            `torch.Tensor`: The computed loss.
+            `torch.Tensor`: The computed loss of shape `(1,)`.
         """
         anomaly_scores = self.anomaly_score(x).pow(2).mean()
         penalty = self._compute_penalty()
@@ -126,9 +135,38 @@ class DeepSVDD(torch.nn.Module):
             raise RuntimeError(f"The penalty term should be a single scalar value, but is of shape {list(penalty.shape)}.")
         return anomaly_scores + penalty
     
+    
+    def set_one_class_radius(self, r: float) -> None:
+        """Sets the radius for the one-class Deep SVDD.
+        
+        Arguments:
+            `r` (`float`): The radius to be set.
+        """
+        self.__r_one_class = torch.tensor([r], device=self.__device)
+        return
+    
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the Deep SVDD model."""
+        _cfg = {'size': [x.size(0)], 'device': x.device}
+        zeros   = torch.zeros(**_cfg)
+        ones    = torch.ones( **_cfg)
+        score   = self.anomaly_score(x)
+        if self.__is_soft:
+            return torch.where(score<=0.0, zeros, ones)
+        else:
+            return torch.where(score<=self.__r_one_class.pow(2), zeros, ones)
+    
+    
     @property
-    def nu(self) -> float:      return self.__nu
+    def nu(self) -> float:  return self.__nu
     @property
-    def C(self) -> float:       return self.__C
+    def C(self) -> float:   return self.__C
     @property
-    def device(self) -> torch.device: return self.__device
+    def is_soft_boundary(self) -> bool: return self.__is_soft
+    @property
+    def soft_radius(self) -> float:         return self.r_soft.item()
+    @property
+    def one_class_radius(self) -> float:    return self.__r_one_class.item()
+    @property
+    def device(self) -> torch.device:   return self.__device
