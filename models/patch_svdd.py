@@ -17,10 +17,7 @@ def _construct_base_encoder() -> torch.nn.Sequential:
 
 
 class DeepSVDD(torch.nn.Module):
-    """A PyTorch implementation of *Deep SVDD* (referred as `DeepSVDD` in this docstring), suggested in [Deep One-Class Classification](https://proceedings.mlr.press/v80/ruff18a.html).
-    
-    ## Description
-    `DeepSVDD` is a deep learning methodology for anomaly detection that learns a mapping from the input space to a hypersphere in the latent space, such that normal data points are mapped close to the center of the hypersphere while anomalies are mapped far away from the center."""
+    """An implementation of the Deep Support Vector Data Description (Deep SVDD) model."""
     def __init__(
             self,
             encoder:            torch.nn.Module,
