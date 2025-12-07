@@ -1,0 +1,56 @@
+Importing libraries... Done.
+Importing custom modules... Done.
+Preparing data loaders... Done.
+Initiate the training of the autoencoder
+Epoch 001 >>> Train loss 1.4161e-01
+Epoch 005 >>> Train loss 6.4055e-02
+Epoch 010 >>> Train loss 4.8514e-02
+Epoch 015 >>> Train loss 3.6322e-02
+Epoch 020 >>> Train loss 2.8776e-02
+Epoch 025 >>> Train loss 2.4506e-02
+Epoch 030 >>> Train loss 2.1921e-02
+Epoch 035 >>> Train loss 2.1404e-02
+Epoch 040 >>> Train loss 1.8632e-02
+Epoch 045 >>> Train loss 1.7678e-02
+Epoch 050 >>> Train loss 1.7658e-02
+Epoch 055 >>> Train loss 1.6334e-02
+Epoch 060 >>> Train loss 1.6191e-02
+Epoch 065 >>> Train loss 1.6106e-02
+Epoch 070 >>> Train loss 1.6024e-02
+Epoch 075 >>> Train loss 1.5942e-02
+Epoch 080 >>> Train loss 1.5858e-02
+Epoch 085 >>> Train loss 1.5774e-02
+Epoch 090 >>> Train loss 1.5688e-02
+Epoch 095 >>> Train loss 1.5601e-02
+Epoch 100 >>> Train loss 1.5514e-02
+Epoch 105 >>> Train loss 1.5427e-02
+Epoch 110 >>> Train loss 1.5341e-02
+Epoch 115 >>> Train loss 1.5255e-02
+Epoch 120 >>> Train loss 1.5171e-02
+Epoch 125 >>> Train loss 1.5087e-02
+Epoch 130 >>> Train loss 1.5004e-02
+Epoch 135 >>> Train loss 1.4921e-02
+Epoch 140 >>> Train loss 1.4840e-02
+Epoch 145 >>> Train loss 1.4735e-02
+Epoch 150 >>> Train loss 1.4664e-02
+Finished the training of the autoencoder
+Initiate the training of Deep SVDD.
+Epoch 001 >>> Train loss 2.5549e-01
+Epoch 005 >>> Train loss 1.7359e-02
+Epoch 010 >>> Train loss 6.2712e-03
+Epoch 015 >>> Train loss 4.4976e-03
+Epoch 020 >>> Train loss 3.7978e-03
+Epoch 025 >>> Train loss 3.2814e-03
+Epoch 030 >>> Train loss 2.8389e-03
+Epoch 035 >>> Train loss 2.4824e-03
+Epoch 040 >>> Train loss 2.1579e-03
+Epoch 045 >>> Train loss 1.9021e-03
+Epoch 050 >>> Train loss 1.7228e-03
+Epoch 055 >>> Train loss 1.4047e-03
+Epoch 060 >>> Train loss 1.3797e-03
+Epoch 065 >>> Train loss 1.3661e-03
+Epoch 070 >>> Train loss 1.3525e-03
+Epoch 075 >>> Train loss 1.3390e-03
+Finished the training of Deep SVDD.
+Evaluate the trained model.
+AUROC score >>> 0.9745

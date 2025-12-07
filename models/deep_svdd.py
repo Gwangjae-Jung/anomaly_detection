@@ -2,7 +2,7 @@ from    typing      import  Self, Optional
 import  torch
 
 
-_DEBUG: bool = True
+__all__: list[str] = ['DeepSVDD']
 
 
 def _construct_base_encoder() -> torch.nn.Sequential:
@@ -21,9 +21,9 @@ class DeepSVDD(torch.nn.Module):
     def __init__(
             self,
             encoder:            torch.nn.Module,
-            nu:                 float = 0.05,
-            C:                  float = 1.0,
-            is_soft_boundary:   bool = True,
+            nu:                 float   = 0.05,
+            C:                  float   = 1.0,
+            is_soft_boundary:   bool    = True,
             device:             Optional[torch.device] = None,
         ) -> Self:
         """The initializer for `DeepSVDD`.
@@ -74,7 +74,7 @@ class DeepSVDD(torch.nn.Module):
     
     
     def initialize_center(self, x: Optional[torch.Tensor]=None, dataloader: Optional[torch.utils.data.DataLoader]=None, eps: float=1e-2) -> None:
-        """Initializes the center of the hypersphere.
+        """Initializes the center of the hypersphere to be the mean of the encoded representations of the input data.
         
         Arguments:
             `x` (`Optional[torch.Tensor]`, default=`None`):
@@ -121,7 +121,11 @@ class DeepSVDD(torch.nn.Module):
     
     
     def _compute_penalty(self, unit: bool=False) -> torch.Tensor:
-        """Computes the penalty term of shape `(1,)`, which is defined as the sum of the Frobenius norms of the weights of all layers in the encoder, multiplied by `C/2`.
+        """Computes the penalty term of shape `(1,)`, which is defined as the sum of the squares of the Frobenius norms of the weights of all layers in the encoder, multiplied by `C/2`.
+        
+        Arguments:
+            `unit` (`bool`, default=`False`):
+                If `True`, returns the penalty term (the half of the sum of the squares of the Frobenius norms of the weights) without multiplying by `C`. Otherwise, returns the penalty term multiplied by `C`.
         """
         penalty = torch.zeros((1,), device=self.__device)
         for p in self.encoder.parameters():
@@ -142,10 +146,6 @@ class DeepSVDD(torch.nn.Module):
         """
         anomaly_score = self.anomaly_score(x).pow(2).mean()/self.__nu
         penalty = self._compute_penalty()
-        if _DEBUG and anomaly_score.numel()>1:
-            raise RuntimeError(f"The average anomaly score should be a single scalar value, but is of shape {list(anomaly_score.shape)}.")
-        if _DEBUG and penalty.numel()>1:
-            raise RuntimeError(f"The penalty term should be a single scalar value, but is of shape {list(penalty.shape)}.")
         return torch.clamp_min(anomaly_score, self.r_soft.pow(2)) + penalty
     
     
@@ -160,10 +160,6 @@ class DeepSVDD(torch.nn.Module):
         """
         anomaly_scores = self.anomaly_score(x).pow(2).mean()
         penalty = self._compute_penalty()
-        if _DEBUG and anomaly_scores.numel()>1:
-            raise RuntimeError(f"The average anomaly score should be a single scalar value, but is of shape {list(anomaly_scores.shape)}.")
-        if _DEBUG and penalty.numel()>1:
-            raise RuntimeError(f"The penalty term should be a single scalar value, but is of shape {list(penalty.shape)}.")
         return anomaly_scores + penalty
     
     
@@ -189,7 +185,13 @@ class DeepSVDD(torch.nn.Module):
     
     
     def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """Predict whether the input samples are anomalies. `x[i]` is `0` if it is normal, `1` otherwise."""
+        """Predict whether the input samples are anomalies. `x[i]` is `0` if it is normal, `1` otherwise.
+        
+        Arguments:
+            `x` (`torch.Tensor`): The input tensor of shape `(batch_size, ...)`.
+        Returns:
+            `torch.Tensor`: The predicted labels of shape `(batch_size, 1)`.
+        """
         _cfg = {'size': [1], 'device': x.device}
         zeros   = torch.zeros(**_cfg)
         ones    = torch.ones( **_cfg)
