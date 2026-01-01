@@ -1,5 +1,6 @@
 Deep-SVDD-PyTorch/
 Anomaly-Detection-PatchSVDD-PyTorch/
+Patch_SVDD__study/
 
 datasets/*
 models/svdd.py

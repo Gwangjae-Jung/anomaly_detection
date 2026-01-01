@@ -2,21 +2,10 @@ from    typing      import  Self, Optional
 import  torch
 
 
-__all__: list[str] = ['DeepSVDD']
+__all__: list[str] = ['PatchSVDD']
 
 
-def _construct_base_encoder() -> torch.nn.Sequential:
-    return torch.nn.Sequential(
-        torch.nn.Flatten(),
-        torch.nn.Linear(28 * 28, 128),
-        torch.nn.ReLU(),
-        torch.nn.Linear(128, 64),
-        torch.nn.ReLU(),
-        torch.nn.Linear(64, 32),
-    )
-
-
-class DeepSVDD(torch.nn.Module):
+class PatchSVDD(torch.nn.Module):
     """An implementation of the Deep Support Vector Data Description (Deep SVDD) model."""
     def __init__(
             self,
@@ -112,6 +101,9 @@ class DeepSVDD(torch.nn.Module):
         Returns:
             `torch.Tensor`: The computed anomaly scores of shape `(batch_size, 1)`.
         """
+        import  warnings
+        import  numpy
+        warnings.warn("The method 'anomaly_score' is deprecated. Please use 'forward' instead.", DeprecationWarning)
         z: torch.Tensor = self.encoder.forward(x).flatten(start_dim=1)
         base_score = (z-self.__center).norm(p=2, dim=1, keepdim=True)
         if self.__is_soft:

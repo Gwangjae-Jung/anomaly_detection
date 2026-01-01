@@ -5,17 +5,6 @@ import  torch
 __all__: list[str] = ['DeepSVDD']
 
 
-def _construct_base_encoder() -> torch.nn.Sequential:
-    return torch.nn.Sequential(
-        torch.nn.Flatten(),
-        torch.nn.Linear(28 * 28, 128),
-        torch.nn.ReLU(),
-        torch.nn.Linear(128, 64),
-        torch.nn.ReLU(),
-        torch.nn.Linear(64, 32),
-    )
-
-
 class DeepSVDD(torch.nn.Module):
     """A PyTorch implementation of *Deep SVDD* (referred as `DeepSVDD` in this docstring), suggested in [Deep One-Class Classification](https://proceedings.mlr.press/v80/ruff18a.html).
     
